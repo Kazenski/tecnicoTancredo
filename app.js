@@ -4,8 +4,35 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// CARREGA AS PERGUNTAS DINÂMICAS DO BANCO
 document.addEventListener('DOMContentLoaded', async () => {
+    await carregarDadosColegio();
+    carregarPerguntas();
+});
+
+// Busca o Colégio no banco de dados e exibe o logo e nome no formulário
+async function carregarDadosColegio() {
+    try {
+        const { data: colegio } = await _supabase
+            .from('colegios')
+            .select('*')
+            .limit(1)
+            .maybeSingle();
+
+        if (colegio) {
+            if (colegio.logo_path) {
+                document.getElementById('logoColegioForm').src = colegio.logo_path;
+            }
+            if (colegio.nome) {
+                document.getElementById('tituloColegioForm').innerText = `🔒 Pesquisa: ${colegio.nome}`;
+            }
+        }
+    } catch (e) {
+        console.log("Usando layout padrão de colégio");
+    }
+}
+
+// Renderiza as perguntas dinamicamente
+async function carregarPerguntas() {
     const container = document.getElementById('containerPerguntas');
     
     const { data: perguntas, error } = await _supabase
@@ -28,22 +55,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         label.innerText = p.label_texto;
         divGroup.appendChild(label);
 
-        if (p.tipo_dado === 'number') {
+        if (p.tipo_sql === 'INT') {
             const input = document.createElement('input');
             input.type = 'number';
             input.id = p.campo_chave;
             input.name = p.campo_chave;
             input.required = true;
             divGroup.appendChild(input);
-        } else if (p.tipo_dado === 'text') {
+        } else if (p.tipo_sql === 'TEXT') {
             const input = document.createElement('input');
             input.type = 'text';
             input.id = p.campo_chave;
             input.name = p.campo_chave;
+            if (p.tamanho_max) input.maxLength = p.tamanho_max;
             input.required = true;
             divGroup.appendChild(input);
         } else {
-            // Padrão: Select com opções
             const select = document.createElement('select');
             select.id = p.campo_chave;
             select.name = p.campo_chave;
@@ -74,9 +101,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.getElementById('btnSalvar').style.display = 'block';
-});
+}
 
-// SALVA AS RESPOSTAS
+// Salva a resposta
 document.getElementById('pesquisaForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -87,7 +114,6 @@ document.getElementById('pesquisaForm').addEventListener('submit', async functio
     const formData = new FormData(this);
     const dados = Object.fromEntries(formData.entries());
 
-    // Converte idade para inteiro, se existir no formulário
     if (dados.idade) dados.idade = parseInt(dados.idade);
     if (dados.foi_vitima) dados.foi_vitima = dados.foi_vitima === 'true';
     if (dados.sabe_pedir_ajuda) dados.sabe_pedir_ajuda = dados.sabe_pedir_ajuda === 'true';

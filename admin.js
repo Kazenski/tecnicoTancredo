@@ -37,10 +37,10 @@ function logoutAdmin() {
     location.reload();
 }
 
-// 1. GERENCIAMENTO DE COLÉGIOS E LOGO
+// 1. CARREGA COLÉGIOS E LOGO
 async function carregarColegios() {
-    const { data: colegios, error } = await _supabase.from('colegios').select('*');
-    if (error || !colegios) return;
+    const { data: colegios } = await _supabase.from('colegios').select('*');
+    if (!colegios || colegios.length === 0) return;
 
     const seletor = document.getElementById('seletorColegio');
     seletor.innerHTML = '';
@@ -52,10 +52,8 @@ async function carregarColegios() {
         seletor.appendChild(opt);
     });
 
-    if (colegios.length > 0) {
-        colegioAtivoId = colegios[0].id;
-        atualizarHeaderColegio(colegios[0]);
-    }
+    colegioAtivoId = colegios[0].id;
+    atualizarHeaderColegio(colegios[0]);
 }
 
 function trocarColegioAtivo() {
@@ -77,14 +75,11 @@ function atualizarHeaderColegio(colegio) {
     }
 }
 
-// 2. BUSCA E PLOTA OS GRÁFICOS DO COLÉGIO SELECIONADO
+// 2. GRÁFICOS
 async function carregarEstatisticas() {
-    const { data: respostas, error } = await _supabase
+    const { data: respostas } = await _supabase
         .from('respostas_pesquisa')
-        .select('*')
-        .eq('colegio_id', colegioAtivoId);
-
-    if (error) return;
+        .select('*');
 
     document.getElementById('totalRespostas').innerText = respostas ? respostas.length : 0;
 
@@ -96,7 +91,7 @@ async function carregarEstatisticas() {
 
     const ctx = document.getElementById('graficoMotivos').getContext('2d');
     
-    if (window.meuGrafico) window.meuGrafico.destroy(); // Limpa gráfico anterior
+    if (window.meuGrafico) window.meuGrafico.destroy();
 
     window.meuGrafico = new Chart(ctx, {
         type: 'bar',
@@ -115,7 +110,7 @@ async function carregarEstatisticas() {
     });
 }
 
-// 3. EXIBE AS PERGUNTAS COM 100% DOS TEXTOS E OPÇÕES VISÍVEIS (READ)
+// 3. EXIBE 100% DOS TEXTOS E USA 'campo_chave' COMO CHAVE PRIMÁRIA
 async function carregarEditorPerguntas() {
     const container = document.getElementById('gerenciadorPerguntas');
 
@@ -132,25 +127,26 @@ async function carregarEditorPerguntas() {
     container.innerHTML = '';
 
     perguntas.forEach(p => {
+        const key = p.campo_chave;
         const card = document.createElement('div');
         card.className = 'item-pergunta-card';
 
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <div>
-                    <strong>Coluna SQL: <code>${p.campo_chave}</code></strong> 
+                    <strong>Coluna SQL: <code>${key}</code></strong> 
                     <span class="badge-sql">${p.tipo_sql || 'VARCHAR'}(${p.tamanho_max || 100})</span>
                 </div>
-                <button onclick="deletarPergunta(${p.id})" class="btn-danger" style="width:auto; padding:5px 10px; font-size:0.8rem;">🗑️ Excluir</button>
+                <button onclick="deletarPergunta('${key}')" class="btn-danger" style="width:auto; padding:5px 10px; font-size:0.8rem;">🗑️ Excluir</button>
             </div>
 
             <label>Enunciado da Pergunta (100% Visível):</label>
-            <textarea id="label_${p.id}" class="input-full-text" style="margin-bottom:10px;">${p.label_texto}</textarea>
+            <textarea id="label_${key}" class="input-full-text" style="margin-bottom:10px;">${p.label_texto}</textarea>
 
             <div class="grid-sql-config">
                 <div>
                     <label>Tipo de Dado Esperado (SQL):</label>
-                    <select id="tipo_sql_${p.id}">
+                    <select id="tipo_sql_${key}">
                         <option value="VARCHAR" ${p.tipo_sql === 'VARCHAR' ? 'selected' : ''}>VARCHAR</option>
                         <option value="INT" ${p.tipo_sql === 'INT' ? 'selected' : ''}>INT</option>
                         <option value="BOOLEAN" ${p.tipo_sql === 'BOOLEAN' ? 'selected' : ''}>BOOLEAN</option>
@@ -159,24 +155,67 @@ async function carregarEditorPerguntas() {
                 </div>
                 <div>
                     <label>Tamanho Máx. (Caracteres):</label>
-                    <input type="number" id="tamanho_max_${p.id}" value="${p.tamanho_max || 100}">
+                    <input type="number" id="tamanho_max_${key}" value="${p.tamanho_max || 100}">
                 </div>
                 <div style="display:flex; align-items:flex-end;">
-                    <button onclick="salvarEdicaoPergunta(${p.id})" class="btn-primary" style="width:100%; padding:10px;">
+                    <button onclick="salvarEdicaoPergunta('${key}')" class="btn-primary" style="width:100%; padding:10px;">
                         💾 Salvar Alterações SQL
                     </button>
                 </div>
             </div>
 
             <label>Todas as Opções Cadastradas (Separadas por vírgula):</label>
-            <textarea id="opcoes_${p.id}" class="input-full-text">${p.opcoes || ''}</textarea>
+            <textarea id="opcoes_${key}" class="input-full-text">${p.opcoes || ''}</textarea>
         `;
 
         container.appendChild(card);
     });
 }
 
-// 4. INSERIR PERGUNTA COM TIPAGEM SQL (CREATE)
+// 4. EDITA USANDO 'campo_chave' (RESOLVE ERRO 400)
+async function salvarEdicaoPergunta(campoChave) {
+    const novoLabel = document.getElementById(`label_${campoChave}`).value;
+    const novoTipoSql = document.getElementById(`tipo_sql_${campoChave}`).value;
+    const novoTamanhoMax = parseInt(document.getElementById(`tamanho_max_${campoChave}`).value);
+    const novasOpcoes = document.getElementById(`opcoes_${campoChave}`).value;
+
+    const { error } = await _supabase
+        .from('perguntas_formulario')
+        .update({ 
+            label_texto: novoLabel, 
+            tipo_sql: novoTipoSql,
+            tamanho_max: novoTamanhoMax,
+            opcoes: novasOpcoes 
+        })
+        .eq('campo_chave', campoChave);
+
+    if (error) {
+        console.error("Erro ao salvar:", error);
+        alert("❌ Erro ao atualizar atributos da pergunta.");
+    } else {
+        alert("✅ Atributos SQL atualizados com sucesso!");
+        carregarEditorPerguntas();
+    }
+}
+
+// 5. APAGA USANDO 'campo_chave'
+async function deletarPergunta(campoChave) {
+    if (!confirm(`Deseja apagar a pergunta '${campoChave}' da base de dados?`)) return;
+
+    const { error } = await _supabase
+        .from('perguntas_formulario')
+        .delete()
+        .eq('campo_chave', campoChave);
+
+    if (error) {
+        alert("❌ Erro ao apagar pergunta.");
+    } else {
+        alert("🗑️ Pergunta removida!");
+        carregarEditorPerguntas();
+    }
+}
+
+// 6. CRIA NOVA PERGUNTA
 async function inserirPergunta() {
     const texto = document.getElementById('novoTexto').value;
     const campoChave = document.getElementById('novoCampoChave').value;
@@ -204,49 +243,10 @@ async function inserirPergunta() {
     if (error) {
         alert("❌ Erro ao inserir pergunta no Schema.");
     } else {
-        alert("✅ Pergunta adicionada e tipada com sucesso!");
+        alert("✅ Nova pergunta adicionada!");
         document.getElementById('novoTexto').value = '';
         document.getElementById('novoCampoChave').value = '';
         document.getElementById('novasOpcoesInput').value = '';
-        carregarEditorPerguntas();
-    }
-}
-
-// 5. SALVAR EDIÇÃO (UPDATE)
-async function salvarEdicaoPergunta(id) {
-    const novoLabel = document.getElementById(`label_${id}`).value;
-    const novoTipoSql = document.getElementById(`tipo_sql_${id}`).value;
-    const novoTamanhoMax = parseInt(document.getElementById(`tamanho_max_${id}`).value);
-    const novasOpcoes = document.getElementById(`opcoes_${id}`).value;
-
-    const { error } = await _supabase
-        .from('perguntas_formulario')
-        .update({ 
-            label_texto: novoLabel, 
-            tipo_sql: novoTipoSql,
-            tamanho_max: novoTamanhoMax,
-            opcoes: novasOpcoes 
-        })
-        .eq('id', id);
-
-    if (error) {
-        alert("❌ Erro ao atualizar atributos da pergunta.");
-    } else {
-        alert("✅ Atributos SQL atualizados com sucesso!");
-        carregarEditorPerguntas();
-    }
-}
-
-// 6. DELETAR PERGUNTA (DELETE)
-async function deletarPergunta(id) {
-    if (!confirm("Deseja apagar esta coluna/pergunta da base de dados?")) return;
-
-    const { error } = await _supabase.from('perguntas_formulario').delete().eq('id', id);
-
-    if (error) {
-        alert("❌ Erro ao apagar pergunta.");
-    } else {
-        alert("🗑️ Pergunta removida!");
         carregarEditorPerguntas();
     }
 }
