@@ -1,0 +1,104 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f0f2f5;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.card-container, .admin-card {
+    background-color: #ffffff;
+    max-width: 650px;
+    width: 100%;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+header {
+    margin-bottom: 25px;
+    border-bottom: 2px solid #eef0f3;
+    padding-bottom: 15px;
+}
+
+header h1 {
+    font-size: 1.5rem;
+    color: #1a202c;
+    margin-bottom: 8px;
+}
+
+header p {
+    font-size: 0.9rem;
+    color: #718096;
+}
+
+.field-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    color: #2d3748;
+}
+
+input[type="number"], select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background-color: #fff;
+    transition: border-color 0.2s;
+}
+
+input:focus, select:focus {
+    border-color: #3182ce;
+    outline: none;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    background-color: #3182ce;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #2b6cb0;
+}
+
+.metrics-grid {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.metric-card {
+    flex: 1;
+    background: #ebf8ff;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.metric-card span {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #2b6cb0;
+}

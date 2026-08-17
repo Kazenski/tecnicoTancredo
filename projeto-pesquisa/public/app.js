@@ -1,34 +1,43 @@
-// public/app.js
+// Configuração do Supabase vindo da CDN do HTML
+const SUPABASE_URL = 'https://dmwbvydkogpnhmprezew.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtd2J2eWRrb2dwbmhtcHJlemV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5ODE4NDksImV4cCI6MjEwMjU1Nzg0OX0.bi15oVkl8n8veVCkKjryKtuPSzrPjKblJ9AMERymhFY';
 
-document.getElementById('pesquisaForm').addEventListener('submit', async function(event) {
-    // 1. Impede a página de recarregar quando clica em salvar
-    event.preventDefault(); 
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // 2. Captura todos os dados do formulário "magicamente"
-    // (Para isso funcionar, os <input> e <select> no HTML precisam ter o atributo 'name')
-    const formData = new FormData(this);
-    const dadosConvertidos = Object.fromEntries(formData.entries());
+document.getElementById('pesquisaForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
 
-    try {
-        // 3. Envia os dados para a nossa própria API no servidor Node.js
-        const resposta = await fetch('/api/salvar-resposta', {
-            method: 'POST', // Estamos ENVIANDO dados
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(dadosConvertidos) // Transforma o objeto em texto JSON
-        });
+    const btn = document.getElementById('btnSalvar');
+    btn.disabled = true;
+    btn.innerText = "Enviando dados...";
 
-        // 4. Verifica se o servidor respondeu com sucesso
-        if (resposta.ok) {
-            alert("✅ Dados salvos com sucesso! Muito obrigado por contribuir para a pesquisa.");
-            this.reset(); // Limpa o formulário para o próximo aluno preencher
-        } else {
-            alert("❌ Poxa, ocorreu um erro ao salvar na base de dados.");
-        }
+    // Captura os dados informados no formulário
+    const dados = {
+        serie: document.getElementById('serie').value,
+        turno: document.getElementById('turno').value,
+        idade: parseInt(document.getElementById('idade').value),
+        genero: document.getElementById('genero').value,
+        tempo_telas: document.getElementById('tempo_telas').value,
+        presenciou_bullying: document.getElementById('presenciou_bullying').value,
+        foi_vitima: document.getElementById('foi_vitima').value === 'true',
+        ambiente_risco: document.getElementById('ambiente_risco').value,
+        sabe_pedir_ajuda: document.getElementById('sabe_pedir_ajuda').value === 'true',
+        motivo_frequente: document.getElementById('motivo_frequente').value
+    };
 
-    } catch (erro) {
-        console.error("Erro de comunicação:", erro);
-        alert("❌ Erro de conexão com o servidor.");
+    // Insere diretamente na tabela do Supabase
+    const { data, error } = await _supabase
+        .from('respostas_pesquisa')
+        .insert([dados]);
+
+    if (error) {
+        console.error("Erro ao salvar:", error);
+        alert("❌ Ocorreu um erro ao salvar a resposta.");
+    } else {
+        alert("✅ Resposta anônima salva com sucesso!");
+        this.reset();
     }
+
+    btn.disabled = false;
+    btn.innerText = "💾 Salvar Resposta Anônima";
 });

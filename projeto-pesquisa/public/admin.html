@@ -3,22 +3,32 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Painel Admin - Dashboard</title>
+    <title>Painel Admin - Resultados da Pesquisa</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
-    <div class="admin-container">
-        <h1>📊 Painel de Análise: Cyberbullying</h1>
-        <p>Dados coletados anonimamente pelos alunos.</p>
+    <div class="admin-card">
+        <header>
+            <h1>📊 Dashboard da Pesquisa</h1>
+            <p>Acompanhamento de entrevistados e análises em tempo real.</p>
+        </header>
 
-        <div class="grafico-box" style="width: 80%; margin: 0 auto;">
-            <canvas id="graficoRespostas"></canvas>
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <h3>Total de Entrevistados</h3>
+                <span id="totalRespostas">0</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <canvas id="graficoMotivos"></canvas>
         </div>
 
         <br>
-        <a href="index.html">⬅️ Voltar para o Formulário</a>
+        <a href="index.html">⬅️ Ir para o Formulário Público</a>
     </div>
 
     <script src="admin.js"></script>

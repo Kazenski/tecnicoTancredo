@@ -3,23 +3,83 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Pesquisa Escolar: Convivência Digital</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesquisa Digital: Convivência Escolar</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
-    <div class="container">
-        <h1 id="titulo-form">Pesquisa Anônima: Cyberbullying</h1>
-        <p>Garantimos 100% de anonimato. Não pedimos seu nome, e-mail ou matrícula.</p>
+    <div class="card-container">
+        <header>
+            <h1>🔒 Pesquisa Anônima: Convivência Digital</h1>
+            <p>Sua participação é fundamental e totalmente confidencial. Não coletamos nome, e-mail ou matrícula.</p>
+        </header>
 
         <form id="pesquisaForm">
-            <div class="pergunta">
-                <label for="idade">Qual a sua idade?</label>
-                <input type="number" id="idade" name="idade" required min="10" max="21">
+            <div class="field-group">
+                <label for="serie">1. Qual é o seu ano/série escolar?</label>
+                <select id="serie" name="serie" required>
+                    <option value="">Selecione...</option>
+                    <option value="8º Ano">8º Ano EF</option>
+                    <option value="9º Ano">9º Ano EF</option>
+                    <option value="1ª Série EM">1ª Série EM</option>
+                    <option value="2ª Série EM">2ª Série EM</option>
+                    <option value="3ª Série EM">3ª Série EM</option>
+                </select>
             </div>
 
-            <div class="pergunta">
-                <label>Você já foi vítima de mensagens ofensivas ou exposição virtual?</label>
+            <div class="field-group">
+                <label for="turno">2. Em qual turno você estuda?</label>
+                <select id="turno" name="turno" required>
+                    <option value="">Selecione...</option>
+                    <option value="Matutino">Matutino</option>
+                    <option value="Vespertino">Vespertino</option>
+                    <option value="Noturno">Noturno</option>
+                </select>
+            </div>
+
+            <div class="field-group">
+                <label for="idade">3. Qual a sua idade? (Apenas números)</label>
+                <input type="number" id="idade" name="idade" min="10" max="25" placeholder="Ex: 15" required>
+            </div>
+
+            <div class="field-group">
+                <label for="genero">4. Com qual gênero você se identifica?</label>
+                <select id="genero" name="genero" required>
+                    <option value="">Selecione...</option>
+                    <option value="Feminino">Feminino</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Outro">Outro</option>
+                    <option value="Prefiro não informar">Prefiro não informar</option>
+                </select>
+            </div>
+
+            <div class="field-group">
+                <label for="tempo_telas">5. Em média, quantas horas por dia passa em redes sociais ou jogos
+                    online?</label>
+                <select id="tempo_telas" name="tempo_telas" required>
+                    <option value="">Selecione...</option>
+                    <option value="Menos de 1h">Menos de 1h</option>
+                    <option value="1h a 3h">1h a 3h</option>
+                    <option value="3h a 5h">3h a 5h</option>
+                    <option value="Mais de 5h">Mais de 5h</option>
+                </select>
+            </div>
+
+            <div class="field-group">
+                <label for="presenciou_bullying">6. Você já presenciou alguma situação de cyberbullying na
+                    escola?</label>
+                <select id="presenciou_bullying" name="presenciou_bullying" required>
+                    <option value="">Selecione...</option>
+                    <option value="Sim">Sim</option>
+                    <option value="Não">Não</option>
+                    <option value="Não tenho certeza">Não tenho certeza</option>
+                </select>
+            </div>
+
+            <div class="field-group">
+                <label for="foi_vitima">7. Você já foi vítima de ofensas, exclusão ou exposição virtual?</label>
                 <select id="foi_vitima" name="foi_vitima" required>
                     <option value="">Selecione...</option>
                     <option value="true">Sim</option>
@@ -27,9 +87,46 @@
                 </select>
             </div>
 
-            <button type="submit">Salvar Dados Anônimos</button>
+            <div class="field-group">
+                <label for="ambiente_risco">8. Em qual ambiente digital ocorrem mais casos de desrespeito?</label>
+                <select id="ambiente_risco" name="ambiente_risco" required>
+                    <option value="">Selecione...</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="TikTok">TikTok</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Twitter/X">Twitter/X</option>
+                    <option value="Jogos Online">Jogos Online</option>
+                    <option value="Outro">Outro</option>
+                </select>
+            </div>
+
+            <div class="field-group">
+                <label for="sabe_pedir_ajuda">9. Se sofresse violência digital hoje, saberia a quem pedir ajuda na
+                    escola?</label>
+                <select id="sabe_pedir_ajuda" name="sabe_pedir_ajuda" required>
+                    <option value="">Selecione...</option>
+                    <option value="true">Sim</option>
+                    <option value="false">Não</option>
+                </select>
+            </div>
+
+            <div class="field-group">
+                <label for="motivo_frequente">10. Qual você acredita ser o motivo mais frequente para o
+                    cyberbullying?</label>
+                <select id="motivo_frequente" name="motivo_frequente" required>
+                    <option value="">Selecione...</option>
+                    <option value="Aparência física">Aparência física</option>
+                    <option value="Opiniões pessoais">Opiniões pessoais</option>
+                    <option value="Condição financeira">Condição financeira</option>
+                    <option value="Orientação/Identidade">Orientação/Identidade</option>
+                    <option value="Apenas brincadeira">Apenas "brincadeira" para se enturmar</option>
+                </select>
+            </div>
+
+            <button type="submit" id="btnSalvar">💾 Salvar Resposta Anônima</button>
         </form>
     </div>
+
     <script src="app.js"></script>
 </body>
 
