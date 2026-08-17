@@ -11,14 +11,17 @@
 
 <body>
     <div class="card-container">
-        <header>
-            <h1>🔒 Pesquisa Anônima: Convivência Digital</h1>
-            <p>Sua participação é fundamental e totalmente confidencial. Não coletamos nome, e-mail ou matrícula.</p>
+        <header class="header-flex">
+            <div>
+                <h1>🔒 Pesquisa Anônima: Convivência Digital</h1>
+                <p>Sua participação é confidencial. Não pedimos nome, e-mail ou matrícula.</p>
+            </div>
+            <a href="admin.html" class="btn-admin-login">🔑 Login Admin</a>
         </header>
 
         <form id="pesquisaForm">
             <div id="containerPerguntas">
-                <p>Carregando perguntas...</p>
+                <p>Carregando formulário...</p>
             </div>
             <button type="submit" id="btnSalvar" style="display: none;">💾 Salvar Resposta Anônima</button>
         </form>

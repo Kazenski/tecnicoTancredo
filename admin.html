@@ -3,17 +3,31 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Painel Admin - Resultados e Configuração</title>
+    <title>Painel Admin - Gerenciador & Gráficos</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
-    <div class="admin-card">
-        <header>
-            <h1>📊 Dashboard & Edição da Pesquisa</h1>
-            <p>Acompanhamento dos dados e gerenciamento dinâmico de perguntas.</p>
+    <div id="loginModal" class="modal-bg">
+        <div class="modal-box">
+            <h2>🔑 Acesso Restrito Admin</h2>
+            <p>Digite a senha para acessar os gráficos e gerenciar as perguntas.</p>
+            <input type="password" id="senhaInput" placeholder="Sua senha..." style="margin: 15px 0;">
+            <button onclick="autenticarAdmin()">Entrar no Painel</button>
+            <br><br>
+            <a href="index.html" style="font-size:0.85rem; color:#666;">⬅️ Voltar ao Formulário</a>
+        </div>
+    </div>
+
+    <div class="admin-card" id="painelAdmin" style="display: none;">
+        <header class="header-flex">
+            <div>
+                <h1>📊 Painel Administrativo</h1>
+                <p>Análises de dados e CRUD dinâmico de perguntas.</p>
+            </div>
+            <button onclick="logoutAdmin()" class="btn-danger" style="width: auto; padding: 8px 15px;">Sair</button>
         </header>
 
         <div class="metrics-grid">
@@ -29,13 +43,36 @@
 
         <hr style="margin: 30px 0; border: 1px solid #eef0f3;">
 
-        <h2>⚙️ Editar Perguntas e Opções do Formulário</h2>
-        <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">
-            Altere os enunciados ou as opções (separadas por vírgula).
-        </p>
+        <h2>➕ Cadastrar Nova Pergunta</h2>
+        <div class="form-nova-pergunta">
+            <div class="field-group">
+                <label>Texto da Pergunta:</label>
+                <input type="text" id="novoTexto" placeholder="Ex: Qual o seu aplicativo favorito?">
+            </div>
+            <div class="field-group">
+                <label>Campo Chave (Nome da coluna no BD):</label>
+                <input type="text" id="novoCampoChave" placeholder="Ex: app_favorito">
+            </div>
+            <div class="field-group">
+                <label>Tipo de Entrada:</label>
+                <select id="novoTipoDado">
+                    <option value="select">Seleção de Opções (Select)</option>
+                    <option value="number">Número (Input Number)</option>
+                    <option value="text">Texto Livre (Input Text)</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label>Opções (se for Seleção, separe por vírgula):</label>
+                <input type="text" id="novasOpcoesInput" placeholder="Ex: Instagram, TikTok, WhatsApp">
+            </div>
+            <button onclick="inserirPergunta()" class="btn-success">➕ Inserir Pergunta no Formulário</button>
+        </div>
 
+        <hr style="margin: 30px 0; border: 1px solid #eef0f3;">
+
+        <h2>⚙️ Gerenciar Perguntas Cadastradas</h2>
         <div id="gerenciadorPerguntas">
-            <p>Carregando gerenciador...</p>
+            <p>Carregando perguntas...</p>
         </div>
 
         <br>
