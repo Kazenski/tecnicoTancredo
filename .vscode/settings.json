@@ -1,0 +1,12 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "PostgreSQL",
+            "connectString": "postgresql://postgres:turm4215_2026@db.dmwbvydkogpnhmprezew.supabase.co:5432/postgres",
+            "name": "Conexão do Dudu"
+        }
+    ]
+}
