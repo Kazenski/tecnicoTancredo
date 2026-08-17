@@ -4,6 +4,78 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// 1. RENDERIZA AS PERGUNTAS DINAMICAMENTE
+document.addEventListener('DOMContentLoaded', async () => {
+    const container = document.getElementById('containerPerguntas');
+    
+    // Busca do banco a lista de perguntas ordenada
+    const { data: perguntas, error } = await _supabase
+        .from('perguntas_formulario')
+        .select('*')
+        .order('ordem', { ascending: true });
+
+    if (error) {
+        container.innerHTML = '<p>Erro ao carregar o formulário.</p>';
+        return;
+    }
+
+    container.innerHTML = ''; // Limpa mensagem de carregando
+
+    perguntas.forEach(p => {
+        const divGroup = document.createElement('div');
+        divGroup.className = 'field-group';
+
+        const label = document.createElement('label');
+        label.innerText = p.label_texto;
+        divGroup.appendChild(label);
+
+        // Se for o campo idade (número)
+        if (p.campo_chave === 'idade') {
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.id = p.campo_chave;
+            input.name = p.campo_chave;
+            input.min = '10';
+            input.max = '25';
+            input.required = true;
+            divGroup.appendChild(input);
+        } else {
+            // Se for campo de escolha (Select)
+            const select = document.createElement('select');
+            select.id = p.campo_chave;
+            select.name = p.campo_chave;
+            select.required = true;
+
+            const optDefault = document.createElement('option');
+            optDefault.value = '';
+            optDefault.innerText = 'Selecione...';
+            select.appendChild(optDefault);
+
+            // Transforma o texto separado por vírgula em opções HTML
+            const listaOpcoes = p.opcoes ? p.opcoes.split(',').map(o => o.trim()) : [];
+            
+            listaOpcoes.forEach(opText => {
+                const opt = document.createElement('option');
+                // Mantém a compatibilidade com booleano nos campos de Sim/Não
+                if (p.campo_chave === 'foi_vitima' || p.campo_chave === 'sabe_pedir_ajuda') {
+                    opt.value = opText.toLowerCase() === 'sim' ? 'true' : 'false';
+                } else {
+                    opt.value = opText;
+                }
+                opt.innerText = opText;
+                select.appendChild(opt);
+            });
+
+            divGroup.appendChild(select);
+        }
+
+        container.appendChild(divGroup);
+    });
+
+    document.getElementById('btnSalvar').style.display = 'block';
+});
+
+// 2. SALVA A RESPOSTA NA BASE (EXATAMENTE COMO JÁ FUNCIONAVA)
 document.getElementById('pesquisaForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -11,7 +83,6 @@ document.getElementById('pesquisaForm').addEventListener('submit', async functio
     btn.disabled = true;
     btn.innerText = "Enviando dados...";
 
-    // Captura os dados informados no formulário
     const dados = {
         serie: document.getElementById('serie').value,
         turno: document.getElementById('turno').value,
@@ -25,8 +96,7 @@ document.getElementById('pesquisaForm').addEventListener('submit', async functio
         motivo_frequente: document.getElementById('motivo_frequente').value
     };
 
-    // Insere diretamente na tabela do Supabase
-    const { data, error } = await _supabase
+    const { error } = await _supabase
         .from('respostas_pesquisa')
         .insert([dados]);
 

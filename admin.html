@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Painel Admin - Resultados da Pesquisa</title>
+    <title>Painel Admin - Resultados e Configuração</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -12,8 +12,8 @@
 <body>
     <div class="admin-card">
         <header>
-            <h1>📊 Dashboard da Pesquisa</h1>
-            <p>Acompanhamento de entrevistados e análises em tempo real.</p>
+            <h1>📊 Dashboard & Edição da Pesquisa</h1>
+            <p>Acompanhamento dos dados e gerenciamento dinâmico de perguntas.</p>
         </header>
 
         <div class="metrics-grid">
@@ -23,8 +23,19 @@
             </div>
         </div>
 
-        <div style="margin-top: 20px;">
+        <div>
             <canvas id="graficoMotivos"></canvas>
+        </div>
+
+        <hr style="margin: 30px 0; border: 1px solid #eef0f3;">
+
+        <h2>⚙️ Editar Perguntas e Opções do Formulário</h2>
+        <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">
+            Altere os enunciados ou as opções (separadas por vírgula).
+        </p>
+
+        <div id="gerenciadorPerguntas">
+            <p>Carregando gerenciador...</p>
         </div>
 
         <br>
