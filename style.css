@@ -163,3 +163,96 @@ button:hover {
     color: white; border: none; border-radius: 6px; cursor: pointer;
 }
 .btn-success:hover { background-color: #2f855a; }
+
+/* --- LAYOUT ADMINISTRATIVO EXPANDIDO --- */
+body.admin-body {
+    background-color: #f4f6f9;
+    padding: 0;
+    margin: 0;
+}
+
+.admin-wrapper {
+    max-width: 1400px; /* Layout bem amplo */
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.admin-header {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-bottom: 25px;
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-brand img {
+    height: 50px;
+    width: auto;
+    object-fit: contain;
+}
+
+.school-selector-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f8fafc;
+    padding: 8px 15px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.school-selector-box select {
+    padding: 6px 12px;
+    font-weight: bold;
+    color: #2b6cb0;
+}
+
+/* CAIXAS EXPANDIDAS DE PERGUNTAS */
+.item-pergunta-card {
+    background: #ffffff;
+    border-left: 5px solid #3182ce;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.grid-sql-config {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 15px;
+    background: #f7fafc;
+    padding: 12px;
+    border-radius: 6px;
+    margin: 10px 0;
+}
+
+textarea.input-full-text {
+    width: 100%;
+    min-height: 60px;
+    padding: 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.badge-sql {
+    display: inline-block;
+    background: #e2e8f0;
+    color: #2d3748;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}

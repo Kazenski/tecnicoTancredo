@@ -3,80 +3,113 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Painel Admin - Gerenciador & Gráficos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Gerenciador de Perguntas & SQL</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
-<body>
+<body class="admin-body">
+
     <div id="loginModal" class="modal-bg">
         <div class="modal-box">
             <h2>🔑 Acesso Restrito Admin</h2>
-            <p>Digite a senha para acessar os gráficos e gerenciar as perguntas.</p>
-            <input type="password" id="senhaInput" placeholder="Sua senha..." style="margin: 15px 0;">
+            <p>Digite a senha master do colégio.</p>
+            <input type="password" id="senhaInput" placeholder="Senha do Admin..." style="margin: 15px 0;">
             <button onclick="autenticarAdmin()">Entrar no Painel</button>
             <br><br>
-            <a href="index.html" style="font-size:0.85rem; color:#666;">⬅️ Voltar ao Formulário</a>
+            <a href="index.html" style="font-size:0.85rem; color:#666;">⬅️ Voltar ao Formulário Público</a>
         </div>
     </div>
 
-    <div class="admin-card" id="painelAdmin" style="display: none;">
-        <header class="header-flex">
-            <div>
-                <h1>📊 Painel Administrativo</h1>
-                <p>Análises de dados e CRUD dinâmico de perguntas.</p>
+    <div class="admin-wrapper" id="painelAdmin" style="display: none;">
+
+        <header class="admin-header">
+            <div class="header-brand">
+                <img id="logoColegio" src="img/logo.png" alt="Logo Escola"
+                    onerror="this.src='https://via.placeholder.com/80?text=LOGO'">
+                <div>
+                    <h1 id="nomeColegioHeader" style="font-size: 1.3rem; margin:0;">EEB Prof. Ângelo Cascaes Tancredo
+                    </h1>
+                    <span style="font-size: 0.8rem; color: #718096;">Painel de Engenharia de Dados & Pesquisa</span>
+                </div>
             </div>
+
+            <div class="school-selector-box">
+                <label for="seletorColegio">🏫 <strong>Colégio Ativo:</strong></label>
+                <select id="seletorColegio" onchange="trocarColegioAtivo()">
+                </select>
+            </div>
+
             <button onclick="logoutAdmin()" class="btn-danger" style="width: auto; padding: 8px 15px;">Sair</button>
         </header>
 
         <div class="metrics-grid">
             <div class="metric-card">
-                <h3>Total de Entrevistados</h3>
+                <h3>Total de Respostas (Colégio Selecionado)</h3>
                 <span id="totalRespostas">0</span>
             </div>
         </div>
 
-        <div>
+        <div style="background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 30px;">
+            <h2>📊 Análise de Dados: Motivos Frequentes de Cyberbullying</h2>
             <canvas id="graficoMotivos"></canvas>
         </div>
 
-        <hr style="margin: 30px 0; border: 1px solid #eef0f3;">
+        <hr style="margin: 30px 0; border: 1px solid #e2e8f0;">
 
-        <h2>➕ Cadastrar Nova Pergunta</h2>
-        <div class="form-nova-pergunta">
-            <div class="field-group">
-                <label>Texto da Pergunta:</label>
-                <input type="text" id="novoTexto" placeholder="Ex: Qual o seu aplicativo favorito?">
+        <div style="background: #fff; padding: 25px; border-radius: 12px; margin-bottom: 30px;">
+            <h2>➕ Cadastrar Nova Pergunta (Especificação de Engenharia SQL)</h2>
+            <p style="font-size: 0.85rem; color: #666;">Defina os tipos de dados esperados para treinar a modelagem do
+                banco relacional.</p>
+
+            <div class="form-nova-pergunta">
+                <div class="field-group">
+                    <label>Enunciado Completo da Pergunta:</label>
+                    <textarea id="novoTexto" class="input-full-text"
+                        placeholder="Ex: Qual o aplicativo que você mais utiliza durante as aulas?"></textarea>
+                </div>
+
+                <div class="grid-sql-config">
+                    <div>
+                        <label>Campo Chave (Nome da Coluna SQL):</label>
+                        <input type="text" id="novoCampoChave" placeholder="ex: app_mais_usado">
+                    </div>
+                    <div>
+                        <label>Tipo de Dado Esperado (SQL):</label>
+                        <select id="novoTipoSql">
+                            <option value="VARCHAR">VARCHAR (Texto curto/Seleção)</option>
+                            <option value="INT">INT (Número Inteiro)</option>
+                            <option value="BOOLEAN">BOOLEAN (Verdadeiro/Falso)</option>
+                            <option value="TEXT">TEXT (Texto Longo)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Tam. Máx. (Caracteres):</label>
+                        <input type="number" id="novoTamanhoMax" value="100">
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label>Opções de Resposta (separadas por vírgula - Exibir 100% dos textos):</label>
+                    <textarea id="novasOpcoesInput" class="input-full-text"
+                        placeholder="Ex: WhatsApp, Instagram, TikTok, Nulo"></textarea>
+                </div>
+
+                <button onclick="inserirPergunta()" class="btn-success">💾 Salvar Pergunta no Schema SQL</button>
             </div>
-            <div class="field-group">
-                <label>Campo Chave (Nome da coluna no BD):</label>
-                <input type="text" id="novoCampoChave" placeholder="Ex: app_favorito">
-            </div>
-            <div class="field-group">
-                <label>Tipo de Entrada:</label>
-                <select id="novoTipoDado">
-                    <option value="select">Seleção de Opções (Select)</option>
-                    <option value="number">Número (Input Number)</option>
-                    <option value="text">Texto Livre (Input Text)</option>
-                </select>
-            </div>
-            <div class="field-group">
-                <label>Opções (se for Seleção, separe por vírgula):</label>
-                <input type="text" id="novasOpcoesInput" placeholder="Ex: Instagram, TikTok, WhatsApp">
-            </div>
-            <button onclick="inserirPergunta()" class="btn-success">➕ Inserir Pergunta no Formulário</button>
         </div>
 
-        <hr style="margin: 30px 0; border: 1px solid #eef0f3;">
-
-        <h2>⚙️ Gerenciar Perguntas Cadastradas</h2>
-        <div id="gerenciadorPerguntas">
-            <p>Carregando perguntas...</p>
+        <div style="background: #fff; padding: 25px; border-radius: 12px;">
+            <h2>⚙️ Estrutura do Formulário Ativo (Visão 100% dos Textos & Opções)</h2>
+            <div id="gerenciadorPerguntas">
+                <p>Carregando perguntas...</p>
+            </div>
         </div>
 
         <br>
-        <a href="index.html">⬅️ Ir para o Formulário Público</a>
+        <a href="index.html">⬅️ Ir para o Formulário Público de Alunos</a>
     </div>
 
     <script src="admin.js"></script>
