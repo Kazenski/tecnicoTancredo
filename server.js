@@ -7,7 +7,7 @@ app.use(express.static('public')); // Servir os arquivos HTML/CSS
 
 // Configuração do Banco de Dados (Dados do Supabase)
 const pool = new Pool({
-    connectionString: 'SUA_URL_DO_BANCO_DE_DADOS_AQUI' 
+    connectionString: 'postgresql://postgres:turm4215_2026@db.dmwbvydkogpnhmprezew.supabase.co:5432/postgres' 
 });
 
 // Rota para RECEBER os dados do formulário
