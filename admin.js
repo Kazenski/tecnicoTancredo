@@ -488,3 +488,123 @@ window.deletarPergunta = async function(campoChave) {
         carregarEditorPerguntas();
     }
 };
+
+// ==========================================
+// 7. GERADOR DE RELATÓRIO PDF DINÂMICO
+// ==========================================
+window.gerarRelatorioPDF = async function() {
+    const btn = document.getElementById('btnGerarPDF');
+    const textoOriginal = btn.innerText;
+    btn.innerText = "⏳ Gerando PDF... (Aguarde)";
+    btn.disabled = true;
+
+    try {
+        // 1. Busca TODAS as perguntas e as respostas do colégio ativo
+        const { data: perguntas } = await _supabase.from('perguntas_formulario').select('*').order('ordem');
+        const { data: respostas } = await _supabase.from('respostas_pesquisa').select('*').eq('colegio_id', colegioAtivoId);
+
+        // 2. Cria uma "página invisível" para montar o PDF
+        const relatorioDiv = document.createElement('div');
+        relatorioDiv.style.padding = '40px';
+        relatorioDiv.style.background = 'white';
+        relatorioDiv.style.color = 'black';
+        relatorioDiv.style.width = '800px'; // Largura fixa estilo folha A4
+
+        const colegioNome = document.getElementById('nomeColegioHeader').innerText;
+        const colegioLogo = document.getElementById('logoColegio').src;
+        const dataAtual = new Date().toLocaleDateString('pt-BR');
+
+        // 3. Monta o Cabeçalho do PDF com a Logo
+        relatorioDiv.innerHTML = `
+            <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px;">
+                <img src="${colegioLogo}" style="max-height: 80px; object-fit: contain; margin-bottom: 10px;">
+                <h1 style="font-size: 24px; margin: 0; color: #2d3748;">Diagnóstico de Convivência Digital Escolar</h1>
+                <h2 style="font-size: 18px; margin: 5px 0; color: #4a5568;">${colegioNome}</h2>
+                <p style="margin: 5px 0; color: #718096; font-size: 14px;">
+                    Relatório gerado em: ${dataAtual} | Total de Respostas Anônimas: ${respostas ? respostas.length : 0}
+                </p>
+            </div>
+            <div id="pdf-charts-container" style="display: flex; flex-direction: column; gap: 30px;"></div>
+        `;
+
+        // Esconde a div da tela do usuário
+        relatorioDiv.style.position = 'absolute';
+        relatorioDiv.style.left = '-9999px';
+        document.body.appendChild(relatorioDiv);
+
+        const chartsContainer = relatorioDiv.querySelector('#pdf-charts-container');
+
+        // 4. Cria um gráfico dinâmico para CADA pergunta existente no banco!
+        if (perguntas && respostas) {
+            perguntas.forEach((p, index) => {
+                const contagem = {};
+                respostas.forEach(r => {
+                    let valor = r[p.campo_chave];
+                    if (valor === true || valor === 'true') valor = 'Sim';
+                    else if (valor === false || valor === 'false') valor = 'Não';
+                    else if (valor === null || valor === undefined || valor === '') valor = 'Sem Resposta';
+                    
+                    contagem[valor] = (contagem[valor] || 0) + 1;
+                });
+
+                const wrapper = document.createElement('div');
+                // Adiciona quebra de página a cada 3 gráficos para não cortar no meio da folha
+                if (index > 0 && index % 3 === 0) {
+                    wrapper.style.pageBreakBefore = 'always';
+                }
+
+                wrapper.innerHTML = `
+                    <div style="border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px;">
+                        <h3 style="font-size: 15px; margin-bottom: 15px; color: #2b6cb0;">${p.ordem}. ${p.label_texto}</h3>
+                        <div style="height: 220px; position: relative;">
+                            <canvas id="pdf_chart_${p.campo_chave}"></canvas>
+                        </div>
+                    </div>
+                `;
+                chartsContainer.appendChild(wrapper);
+
+                // Desenha o gráfico instantaneamente (Sem animação, para a "foto" do PDF sair perfeita)
+                const ctx = document.getElementById(`pdf_chart_${p.campo_chave}`).getContext('2d');
+                new Chart(ctx, {
+                    type: (p.tipo_sql === 'INT' || p.campo_chave === 'idade') ? 'bar' : 'pie', 
+                    data: {
+                        labels: Object.keys(contagem).length ? Object.keys(contagem) : ['Sem dados'],
+                        datasets: [{
+                            data: Object.values(contagem).length ? Object.values(contagem) : [0],
+                            backgroundColor: ['#3182ce', '#38a169', '#dd6b20', '#e53e3e', '#805ad5', '#319795', '#d53f8c']
+                        }]
+                    },
+                    options: {
+                        animation: false, // ⚠️ CRÍTICO: Desliga animação para o PDF salvar na hora
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'right' } }
+                    }
+                });
+            });
+        }
+
+        // 5. Opções de qualidade do PDF
+        const opt = {
+            margin:       15,
+            filename:     `Relatorio_${colegioNome.replace(/[^a-z0-9]/gi, '_')}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true }, // useCORS permite carregar as logos da internet
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        // 6. Gera e faz o download automático
+        await html2pdf().set(opt).from(relatorioDiv).save();
+
+        // 7. Limpa a "página invisível" da memória
+        document.body.removeChild(relatorioDiv);
+
+    } catch (e) {
+        console.error("Erro ao gerar PDF:", e);
+        alert("❌ Ocorreu um erro ao estruturar o PDF.");
+    } finally {
+        // Devolve o botão ao normal
+        btn.innerText = textoOriginal;
+        btn.disabled = false;
+    }
+};
