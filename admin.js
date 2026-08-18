@@ -600,11 +600,29 @@ window.gerarRelatorioPDF = async function() {
                             backgroundColor: ['#3182ce', '#38a169', '#dd6b20', '#e53e3e', '#805ad5', '#319795', '#d53f8c']
                         }]
                     },
+                    plugins: [ChartDataLabels], // 🔌 ATIVA O PLUGIN AQUI
                     options: {
                         animation: false,
                         responsive: false,
                         maintainAspectRatio: false,
-                        plugins: { legend: { position: 'right' } }
+                        plugins: { 
+                            legend: { position: 'right' },
+                            // 🔢 CONFIGURAÇÃO DOS NÚMEROS NOS GRÁFICOS
+                            datalabels: {
+                                color: '#ffffff', // Cor do texto (Branco)
+                                font: {
+                                    weight: 'bold',
+                                    size: 14
+                                },
+                                // Cria uma bordinha preta ao redor do número para não sumir no fundo claro
+                                textStrokeColor: 'rgba(0, 0, 0, 0.6)',
+                                textStrokeWidth: 3,
+                                // Só mostra o número se for maior que 0
+                                formatter: function(value) {
+                                    return value > 0 ? value : '';
+                                }
+                            }
+                        }
                     }
                 });
             });
