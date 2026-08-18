@@ -490,12 +490,12 @@ window.deletarPergunta = async function(campoChave) {
 };
 
 // ==========================================
-// 7. GERADOR DE RELATÓRIO PDF DINÂMICO (LARGURA AJUSTADA PARA A4)
+// 7. GERADOR DE RELATÓRIO PDF DINÂMICO (CENTRALIZADO EM A4)
 // ==========================================
 window.gerarRelatorioPDF = async function() {
     const btn = document.getElementById('btnGerarPDF');
     const textoOriginal = btn.innerText;
-    btn.innerText = "⏳ Estruturando Relatório... (Aguarde)";
+    btn.innerText = "⏳ Gerando PDF Centralizado... (Aguarde)";
     btn.disabled = true;
 
     const OVERLAY_ID = 'overlay-pdf-loading';
@@ -505,50 +505,53 @@ window.gerarRelatorioPDF = async function() {
         const { data: perguntas } = await _supabase.from('perguntas_formulario').select('*').order('ordem');
         const { data: respostas } = await _supabase.from('respostas_pesquisa').select('*').eq('colegio_id', colegioAtivoId);
 
-        // 2. TELA DE CARREGAMENTO VISÍVEL (Garante renderização perfeita)
+        // 2. TELA DE CARREGAMENTO VISÍVEL E CENTRALIZADA
         const overlay = document.createElement('div');
         overlay.id = OVERLAY_ID;
-        overlay.style.position = 'absolute';
+        overlay.style.position = 'fixed';
         overlay.style.top = '0';
         overlay.style.left = '0';
-        overlay.style.width = '100%';
-        overlay.style.minHeight = '100vh';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
         overlay.style.background = '#edf2f7';
         overlay.style.zIndex = '99999';
+        overlay.style.overflowY = 'auto';
         overlay.style.display = 'flex';
         overlay.style.flexDirection = 'column';
         overlay.style.alignItems = 'center';
-        overlay.style.padding = '30px 0';
+        overlay.style.padding = '20px 0';
 
         const aviso = document.createElement('h2');
-        aviso.innerText = "📸 Gerando PDF enquadrado... Não feche a página!";
+        aviso.innerText = "📸 Gerando PDF Centralizado... Não feche a página!";
         aviso.style.color = '#2b6cb0';
-        aviso.style.marginBottom = '20px';
+        aviso.style.fontSize = '18px';
+        aviso.style.marginBottom = '15px';
         overlay.appendChild(aviso);
 
-        // 3. FOLHA DO PDF (Ajustada para 680px -> Encaixe perfeito no A4)
+        // 3. FOLHA DO PDF (Largura de 700px com margin: 0 auto -> Encaixe e centralização perfeita no A4)
         const relatorioDiv = document.createElement('div');
-        relatorioDiv.style.width = '680px'; 
+        relatorioDiv.style.width = '700px'; 
+        relatorioDiv.style.margin = '0 auto';
         relatorioDiv.style.boxSizing = 'border-box';
         relatorioDiv.style.background = '#ffffff';
-        relatorioDiv.style.padding = '25px';
-        relatorioDiv.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+        relatorioDiv.style.padding = '30px';
+        relatorioDiv.style.borderRadius = '8px';
         
-        const colegioNome = document.getElementById('nomeColegioHeader').innerText;
-        const colegioLogo = document.getElementById('logoColegio').src;
+        const colegioNome = document.getElementById('nomeColegioHeader') ? document.getElementById('nomeColegioHeader').innerText : 'Instituição';
+        const colegioLogo = document.getElementById('logoColegio') ? document.getElementById('logoColegio').src : 'img/logo.png';
         const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-        // 4. Cabeçalho do PDF
+        // 4. Cabeçalho do PDF Centralizado
         relatorioDiv.innerHTML = `
-            <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;">
-                <img src="${colegioLogo}" crossorigin="anonymous" style="max-height: 70px; margin-bottom: 10px; object-fit: contain;">
-                <h1 style="font-size: 20px; margin: 0; color: #2d3748;">Diagnóstico de Convivência Digital</h1>
-                <h2 style="font-size: 16px; margin: 4px 0; color: #4a5568;">${colegioNome}</h2>
-                <p style="margin: 4px 0; color: #718096; font-size: 12px;">
+            <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; width: 100%;">
+                <img src="${colegioLogo}" crossorigin="anonymous" style="max-height: 70px; margin: 0 auto 10px auto; display: block; object-fit: contain;">
+                <h1 style="font-size: 20px; margin: 0; color: #2d3748; text-align: center;">Diagnóstico de Convivência Digital</h1>
+                <h2 style="font-size: 16px; margin: 4px 0; color: #4a5568; text-align: center;">${colegioNome}</h2>
+                <p style="margin: 4px 0; color: #718096; font-size: 12px; text-align: center;">
                     Relatório gerado em: ${dataAtual} | Total de Respostas Anônimas: ${respostas ? respostas.length : 0}
                 </p>
             </div>
-            <div id="pdf-charts-container" style="display: flex; flex-direction: column; gap: 25px;"></div>
+            <div id="pdf-charts-container" style="display: flex; flex-direction: column; gap: 25px; width: 100%; box-sizing: border-box;"></div>
         `;
 
         overlay.appendChild(relatorioDiv);
@@ -556,7 +559,7 @@ window.gerarRelatorioPDF = async function() {
 
         const chartsContainer = relatorioDiv.querySelector('#pdf-charts-container');
 
-        // 5. Renderização Dinâmica dos Gráficos (Proporção 610x220px)
+        // 5. Renderização dos Gráficos em Caixas Centralizadas (Largura do Canvas: 620px)
         if (perguntas && respostas) {
             perguntas.forEach((p, index) => {
                 const contagem = {};
@@ -569,15 +572,19 @@ window.gerarRelatorioPDF = async function() {
                 });
 
                 const wrapper = document.createElement('div');
+                wrapper.style.width = '100%';
+                wrapper.style.boxSizing = 'border-box';
+
+                // Quebra a página a cada 2 gráficos para manter boa legibilidade
                 if (index > 0 && index % 2 === 0) {
                     wrapper.style.pageBreakBefore = 'always';
                 }
 
                 wrapper.innerHTML = `
-                    <div style="border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; box-sizing: border-box; background: #ffffff;">
-                        <h3 style="font-size: 14px; margin-bottom: 12px; color: #2b6cb0; word-break: break-word;">${p.ordem}. ${p.label_texto}</h3>
-                        <div style="text-align: center; width: 100%;">
-                            <canvas id="pdf_chart_${p.campo_chave}" width="610" height="220"></canvas>
+                    <div style="border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; box-sizing: border-box; background: #ffffff; width: 100%;">
+                        <h3 style="font-size: 14px; margin-bottom: 12px; color: #2b6cb0; text-align: left; word-break: break-word;">${p.ordem}. ${p.label_texto}</h3>
+                        <div style="display: flex; justify-content: center; align-items: center; width: 100%;">
+                            <canvas id="pdf_chart_${p.campo_chave}" width="620" height="220" style="display: block; margin: 0 auto;"></canvas>
                         </div>
                     </div>
                 `;
@@ -603,22 +610,28 @@ window.gerarRelatorioPDF = async function() {
             });
         }
 
-        // 6. Espera 2 segundos para o navegador processar a renderização
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // 6. Aguarda 1.8 segundos para garantir o desenho de todos os elementos
+        await new Promise(resolve => setTimeout(resolve, 1800));
 
-        // 7. Configurações de exportação do PDF com margens ajustadas
+        // 7. Configurações de exportação do PDF com enquadramento proporcional
         const opt = {
-            margin:       [10, 10, 10, 10], // Margens de 10mm (superior, esquerda, inferior, direita)
+            margin:       [10, 5, 10, 5], // 10mm superior/inferior, 5mm laterais
             filename:     `Relatorio_${colegioNome.replace(/[^a-z0-9]/gi, '_')}.pdf`,
             image:        { type: 'jpeg', quality: 1.0 },
-            html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 700 }, 
+            html2canvas:  { 
+                scale: 2, 
+                useCORS: true, 
+                backgroundColor: '#ffffff',
+                scrollX: 0,
+                scrollY: 0
+            }, 
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
         // 8. Baixa o arquivo PDF
         await html2pdf().set(opt).from(relatorioDiv).save();
 
-        // 9. Remove o overlay
+        // 9. Remove o overlay da tela
         document.body.removeChild(overlay);
 
     } catch (e) {
