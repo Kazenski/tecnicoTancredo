@@ -7,114 +7,353 @@ const SENHA_MESTRA = 'turm4215_2026'; // Define a senha de acesso ao Painel
 
 let colegioAtivoId = 1;
 
+// Instâncias Globais do Chart.js
+window.chartMotivos = null;
+window.chartRosca = null;
+window.chartDispersao = null;
+window.chartDinamico = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
     if (sessionStorage.getItem('admin_logado') === 'true') {
         liberarAcesso();
     }
 });
 
-function autenticarAdmin() {
-    const senha = document.getElementById('senhaInput').value;
+// 1. AUTENTICAÇÃO
+window.autenticarAdmin = function() {
+    const senhaInput = document.getElementById('senhaInput');
+    const senha = senhaInput ? senhaInput.value : '';
     if (senha === SENHA_MESTRA) {
         sessionStorage.setItem('admin_logado', 'true');
         liberarAcesso();
     } else {
         alert("❌ Senha incorreta!");
     }
-}
+};
 
-async function liberarAcesso() {
-    document.getElementById('loginModal').style.display = 'none';
-    document.getElementById('painelAdmin').style.display = 'block';
+window.liberarAcesso = async function() {
+    const loginModal = document.getElementById('loginModal');
+    const painelAdmin = document.getElementById('painelAdmin');
+    
+    if (loginModal) loginModal.style.display = 'none';
+    if (painelAdmin) painelAdmin.style.display = 'block';
     
     await carregarColegios();
-    carregarEstatisticas();
-    carregarEditorPerguntas();
-}
+    await carregarEstatisticas();
+    await carregarEditorPerguntas();
+};
 
-function logoutAdmin() {
+window.logoutAdmin = function() {
     sessionStorage.removeItem('admin_logado');
     location.reload();
-}
+};
 
-// 1. CARREGA COLÉGIOS E LOGO
-async function carregarColegios() {
-    const { data: colegios } = await _supabase.from('colegios').select('*');
-    if (!colegios || colegios.length === 0) return;
+// 2. GERENCIAMENTO DE COLÉGIOS
+window.carregarColegios = async function() {
+    try {
+        const { data: colegios, error } = await _supabase.from('colegios').select('*').order('nome');
+        const seletor = document.getElementById('seletorColegio');
+        if (!seletor) return;
 
+        seletor.innerHTML = '';
+
+        if (error || !colegios || colegios.length === 0) {
+            seletor.innerHTML = '<option value="1">EEB Prof. Ângelo Cascaes Tancredo</option>';
+            colegioAtivoId = 1;
+            return;
+        }
+
+        colegios.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.innerText = c.nome;
+            opt.dataset.logo = c.logo_path || 'img/logo.png';
+            seletor.appendChild(opt);
+        });
+
+        colegioAtivoId = parseInt(colegios[0].id);
+        seletor.value = colegioAtivoId;
+        atualizarHeaderColegio(colegios[0]);
+    } catch (err) {
+        console.error("Erro ao carregar colégios:", err);
+    }
+};
+
+window.cadastrarColegio = async function() {
+    const inputNome = document.getElementById('novoNomeColegio');
+    const inputLogo = document.getElementById('novoLogoColegio');
+
+    const nome = inputNome ? inputNome.value.trim() : '';
+    const logo_path = inputLogo ? inputLogo.value.trim() : 'img/logo.png';
+
+    if (!nome) {
+        alert("⚠️ Por favor, informe o nome do Colégio ou Setor.");
+        return;
+    }
+
+    try {
+        const { data, error } = await _supabase.from('colegios').insert([{ nome, logo_path }]).select();
+
+        if (error) {
+            console.error(error);
+            alert("❌ Erro ao cadastrar colégio/setor.");
+        } else {
+            alert("✅ Instituição/Setor cadastrado com sucesso!");
+            if (inputNome) inputNome.value = '';
+            await carregarColegios();
+            if (data && data.length > 0) {
+                const seletor = document.getElementById('seletorColegio');
+                if (seletor) {
+                    seletor.value = data[0].id;
+                    trocarColegioAtivo();
+                }
+            }
+        }
+    } catch (e) {
+        console.error(e);
+        alert("❌ Ocorreu um erro ao salvar.");
+    }
+};
+
+window.trocarColegioAtivo = function() {
     const seletor = document.getElementById('seletorColegio');
-    seletor.innerHTML = '';
+    if (!seletor) return;
 
-    colegios.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.innerText = c.nome;
-        seletor.appendChild(opt);
-    });
-
-    colegioAtivoId = colegios[0].id;
-    atualizarHeaderColegio(colegios[0]);
-}
-
-function trocarColegioAtivo() {
-    const seletor = document.getElementById('seletorColegio');
     colegioAtivoId = parseInt(seletor.value);
+    const opcao = seletor.options[seletor.selectedIndex];
     
-    _supabase.from('colegios').select('*').eq('id', colegioAtivoId).single().then(({ data }) => {
-        if (data) atualizarHeaderColegio(data);
-    });
+    if (opcao) {
+        atualizarHeaderColegio({
+            nome: opcao.innerText,
+            logo_path: opcao.dataset.logo || 'img/logo.png'
+        });
+    }
 
     carregarEstatisticas();
     carregarEditorPerguntas();
-}
+};
 
 function atualizarHeaderColegio(colegio) {
-    document.getElementById('nomeColegioHeader').innerText = colegio.nome;
-    if (colegio.logo_path) {
-        document.getElementById('logoColegio').src = colegio.logo_path;
-    }
+    const elNome = document.getElementById('nomeColegioHeader');
+    const elLogo = document.getElementById('logoColegio');
+
+    if (elNome) elNome.innerText = colegio.nome || 'Instituição Selecionada';
+    if (elLogo) elLogo.src = colegio.logo_path || 'img/logo.png';
 }
 
-// 2. GRÁFICOS
-async function carregarEstatisticas() {
-    const { data: respostas } = await _supabase
-        .from('respostas_pesquisa')
-        .select('*');
+// 3. CARREGAR DADOS DAS PESQUISAS
+window.carregarEstatisticas = async function() {
+    try {
+        const { data: respostas, error } = await _supabase
+            .from('respostas_pesquisa')
+            .select('*')
+            .eq('colegio_id', colegioAtivoId);
 
-    document.getElementById('totalRespostas').innerText = respostas ? respostas.length : 0;
+        const elTotal = document.getElementById('totalRespostas');
+        if (elTotal) elTotal.innerText = respostas ? respostas.length : 0;
+
+        renderizarGraficoMotivos(respostas || []);
+        await renderizarRelatoriosAvancados(respostas || []);
+    } catch (e) {
+        console.error("Erro em carregarEstatisticas:", e);
+    }
+};
+
+function renderizarGraficoMotivos(respostas) {
+    const canvas = document.getElementById('graficoMotivos');
+    if (!canvas) return;
 
     const contagemMotivos = {};
-    (respostas || []).forEach(r => {
+    respostas.forEach(r => {
         const motivo = r.motivo_frequente || 'Outro / Não informado';
         contagemMotivos[motivo] = (contagemMotivos[motivo] || 0) + 1;
     });
 
-    renderizarRelatoriosAvancados(respostas);
-    
-    const ctx = document.getElementById('graficoMotivos').getContext('2d');
-    
-    if (window.meuGrafico) window.meuGrafico.destroy();
+    const labels = Object.keys(contagemMotivos);
+    const valores = Object.values(contagemMotivos);
 
-    window.meuGrafico = new Chart(ctx, {
+    if (window.chartMotivos) window.chartMotivos.destroy();
+
+    window.chartMotivos = new Chart(canvas.getContext('2d'), {
         type: 'bar',
         data: {
-            labels: Object.keys(contagemMotivos),
+            labels: labels.length ? labels : ['Sem dados registrados'],
             datasets: [{
-                label: 'Motivos Mais Frequentes de Cyberbullying',
-                data: Object.values(contagemMotivos),
-                backgroundColor: '#3182ce'
+                label: 'Motivos Mais Frequentes',
+                data: valores.length ? valores : [0],
+                backgroundColor: '#3182ce',
+                borderRadius: 6
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
         }
     });
 }
 
-// 3. EXIBE 100% DOS TEXTOS E USA 'campo_chave' COMO CHAVE PRIMÁRIA
-async function carregarEditorPerguntas() {
+// 4. BI & RELATÓRIOS AVANÇADOS
+window.renderizarRelatoriosAvancados = async function(respostas) {
+    // --- A) GRÁFICO DE ROSCA (Turnos) ---
+    const canvasRosca = document.getElementById('graficoRoscaTurno');
+    if (canvasRosca) {
+        const contagemTurno = {};
+        respostas.forEach(r => {
+            const t = r.turno || 'Não informado';
+            contagemTurno[t] = (contagemTurno[t] || 0) + 1;
+        });
+
+        if (window.chartRosca) window.chartRosca.destroy();
+
+        window.chartRosca = new Chart(canvasRosca.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(contagemTurno).length ? Object.keys(contagemTurno) : ['Sem dados'],
+                datasets: [{
+                    data: Object.values(contagemTurno).length ? Object.values(contagemTurno) : [1],
+                    backgroundColor: ['#3182ce', '#38a169', '#dd6b20', '#e53e3e', '#805ad5']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+
+    // --- B) GRÁFICO DE IDADES DAS VÍTIMAS ---
+    const canvasDispersao = document.getElementById('graficoDispersao');
+    if (canvasDispersao) {
+        const contagemIdade = {};
+        respostas.filter(r => r.foi_vitima === true || r.foi_vitima === 'true').forEach(r => {
+            if (r.idade) {
+                contagemIdade[r.idade] = (contagemIdade[r.idade] || 0) + 1;
+            }
+        });
+
+        const idadesOrdenadas = Object.keys(contagemIdade).sort((a,b) => parseInt(a) - parseInt(b));
+        const qtdes = idadesOrdenadas.map(i => contagemIdade[i]);
+
+        if (window.chartDispersao) window.chartDispersao.destroy();
+
+        window.chartDispersao = new Chart(canvasDispersao.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: idadesOrdenadas.length ? idadesOrdenadas.map(i => `${i} anos`) : ['Sem vítimas'],
+                datasets: [{
+                    label: 'Nº de Vítimas por Idade',
+                    data: qtdes.length ? qtdes : [0],
+                    backgroundColor: '#e53e3e',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+    }
+
+    // --- C) POPULAR FILTRO DINÂMICO ---
+    const seletorFiltro = document.getElementById('seletorFiltroDinamico');
+    if (seletorFiltro) {
+        try {
+            const { data: perguntas } = await _supabase
+                .from('perguntas_formulario')
+                .select('*')
+                .order('ordem', { ascending: true });
+
+            seletorFiltro.innerHTML = '<option value="">-- Selecione uma pergunta para analisar --</option>';
+
+            if (perguntas && perguntas.length > 0) {
+                perguntas.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.campo_chave;
+                    opt.innerText = p.label_texto;
+                    seletorFiltro.appendChild(opt);
+                });
+            }
+        } catch (err) {
+            console.error("Erro ao carregar lista de filtro dinâmico:", err);
+        }
+    }
+};
+
+// 5. EXPLORADOR DINÂMICO
+window.gerarGraficoDinamico = async function() {
+    const seletor = document.getElementById('seletorFiltroDinamico');
+    const canvas = document.getElementById('graficoDinamico');
+
+    if (!seletor || !canvas) return;
+
+    const campo = seletor.value;
+    if (!campo) {
+        alert("⚠️ Escolha uma pergunta no menu suspenso para gerar o gráfico.");
+        return;
+    }
+
+    const textoPergunta = seletor.options[seletor.selectedIndex].text;
+
+    try {
+        const { data: respostas, error } = await _supabase
+            .from('respostas_pesquisa')
+            .select(campo)
+            .eq('colegio_id', colegioAtivoId);
+
+        if (error) {
+            alert("❌ Erro ao consultar dados no Supabase.");
+            return;
+        }
+
+        const contagem = {};
+        (respostas || []).forEach(r => {
+            let valor = r[campo];
+            if (valor === true || valor === 'true') valor = 'Sim';
+            else if (valor === false || valor === 'false') valor = 'Não';
+            else if (valor === null || valor === undefined || valor === '') valor = 'Sem Resposta';
+
+            contagem[valor] = (contagem[valor] || 0) + 1;
+        });
+
+        const labels = Object.keys(contagem);
+        const valores = Object.values(contagem);
+
+        if (window.chartDinamico) window.chartDinamico.destroy();
+
+        window.chartDinamico = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels.length ? labels : ['Sem dados'],
+                datasets: [{
+                    label: `Frequência de Respostas`,
+                    data: valores.length ? valores : [0],
+                    backgroundColor: '#805ad5',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Barras horizontais
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+                plugins: {
+                    title: { display: true, text: textoPergunta }
+                }
+            }
+        });
+
+    } catch (e) {
+        console.error("Erro ao gerar gráfico dinâmico:", e);
+    }
+};
+
+// 6. CRUD DE PERGUNTAS (ESQUEMA SQL)
+window.carregarEditorPerguntas = async function() {
     const container = document.getElementById('gerenciadorPerguntas');
+    if (!container) return;
 
     const { data: perguntas, error } = await _supabase
         .from('perguntas_formulario')
@@ -128,7 +367,7 @@ async function carregarEditorPerguntas() {
 
     container.innerHTML = '';
 
-    perguntas.forEach(p => {
+    (perguntas || []).forEach(p => {
         const key = p.campo_chave;
         const card = document.createElement('div');
         card.className = 'item-pergunta-card';
@@ -172,53 +411,9 @@ async function carregarEditorPerguntas() {
 
         container.appendChild(card);
     });
-}
+};
 
-// 4. EDITA USANDO 'campo_chave' (RESOLVE ERRO 400)
-async function salvarEdicaoPergunta(campoChave) {
-    const novoLabel = document.getElementById(`label_${campoChave}`).value;
-    const novoTipoSql = document.getElementById(`tipo_sql_${campoChave}`).value;
-    const novoTamanhoMax = parseInt(document.getElementById(`tamanho_max_${campoChave}`).value);
-    const novasOpcoes = document.getElementById(`opcoes_${campoChave}`).value;
-
-    const { error } = await _supabase
-        .from('perguntas_formulario')
-        .update({ 
-            label_texto: novoLabel, 
-            tipo_sql: novoTipoSql,
-            tamanho_max: novoTamanhoMax,
-            opcoes: novasOpcoes 
-        })
-        .eq('campo_chave', campoChave);
-
-    if (error) {
-        console.error("Erro ao salvar:", error);
-        alert("❌ Erro ao atualizar atributos da pergunta.");
-    } else {
-        alert("✅ Atributos SQL atualizados com sucesso!");
-        carregarEditorPerguntas();
-    }
-}
-
-// 5. APAGA USANDO 'campo_chave'
-async function deletarPergunta(campoChave) {
-    if (!confirm(`Deseja apagar a pergunta '${campoChave}' da base de dados?`)) return;
-
-    const { error } = await _supabase
-        .from('perguntas_formulario')
-        .delete()
-        .eq('campo_chave', campoChave);
-
-    if (error) {
-        alert("❌ Erro ao apagar pergunta.");
-    } else {
-        alert("🗑️ Pergunta removida!");
-        carregarEditorPerguntas();
-    }
-}
-
-// 6. CRIA NOVA PERGUNTA
-async function inserirPergunta() {
+window.inserirPergunta = async function() {
     const texto = document.getElementById('novoTexto').value;
     const campoChave = document.getElementById('novoCampoChave').value;
     const tipoSql = document.getElementById('novoTipoSql').value;
@@ -251,4 +446,45 @@ async function inserirPergunta() {
         document.getElementById('novasOpcoesInput').value = '';
         carregarEditorPerguntas();
     }
-}
+};
+
+window.salvarEdicaoPergunta = async function(campoChave) {
+    const novoLabel = document.getElementById(`label_${campoChave}`).value;
+    const novoTipoSql = document.getElementById(`tipo_sql_${campoChave}`).value;
+    const novoTamanhoMax = parseInt(document.getElementById(`tamanho_max_${campoChave}`).value);
+    const novasOpcoes = document.getElementById(`opcoes_${campoChave}`).value;
+
+    const { error } = await _supabase
+        .from('perguntas_formulario')
+        .update({ 
+            label_texto: novoLabel, 
+            tipo_sql: novoTipoSql,
+            tamanho_max: novoTamanhoMax,
+            opcoes: novasOpcoes 
+        })
+        .eq('campo_chave', campoChave);
+
+    if (error) {
+        console.error(error);
+        alert("❌ Erro ao atualizar pergunta.");
+    } else {
+        alert("✅ Atributos SQL atualizados!");
+        carregarEditorPerguntas();
+    }
+};
+
+window.deletarPergunta = async function(campoChave) {
+    if (!confirm(`Deseja apagar a pergunta '${campoChave}'?`)) return;
+
+    const { error } = await _supabase
+        .from('perguntas_formulario')
+        .delete()
+        .eq('campo_chave', campoChave);
+
+    if (error) {
+        alert("❌ Erro ao apagar pergunta.");
+    } else {
+        alert("🗑️ Pergunta removida!");
+        carregarEditorPerguntas();
+    }
+};
