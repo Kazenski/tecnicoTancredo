@@ -490,55 +490,74 @@ window.deletarPergunta = async function(campoChave) {
 };
 
 // ==========================================
-// 7. GERADOR DE RELATÓRIO PDF DINÂMICO (CORRIGIDO)
+// 7. GERADOR DE RELATÓRIO PDF DINÂMICO (BLINDADO)
 // ==========================================
 window.gerarRelatorioPDF = async function() {
     const btn = document.getElementById('btnGerarPDF');
     const textoOriginal = btn.innerText;
-    btn.innerText = "⏳ Preparando gráficos... (Aguarde)";
+    btn.innerText = "⏳ Estruturando Relatório... (Aguarde)";
     btn.disabled = true;
+
+    // ID para podermos remover em caso de erro
+    const OVERLAY_ID = 'overlay-pdf-loading';
 
     try {
         // 1. Busca TODAS as perguntas e as respostas do colégio ativo
         const { data: perguntas } = await _supabase.from('perguntas_formulario').select('*').order('ordem');
         const { data: respostas } = await _supabase.from('respostas_pesquisa').select('*').eq('colegio_id', colegioAtivoId);
 
-        // 2. Cria uma "página invisível" para montar o PDF
-        const relatorioDiv = document.createElement('div');
-        relatorioDiv.style.padding = '40px';
-        relatorioDiv.style.background = '#ffffff';
-        relatorioDiv.style.color = '#000000';
-        relatorioDiv.style.width = '800px'; // Largura fixa estilo folha A4
-        
-        // CORREÇÃO 1: Em vez de jogar para fora da tela, colocamos atrás do conteúdo atual
-        relatorioDiv.style.position = 'absolute';
-        relatorioDiv.style.top = '0';
-        relatorioDiv.style.left = '0';
-        relatorioDiv.style.zIndex = '-1000'; 
+        // 2. CRIA UMA TELA DE CARREGAMENTO VISÍVEL (Para o navegador renderizar com força máxima)
+        const overlay = document.createElement('div');
+        overlay.id = OVERLAY_ID;
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.minHeight = '100vh';
+        overlay.style.background = '#edf2f7';
+        overlay.style.zIndex = '99999'; // Fica na frente de tudo
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.alignItems = 'center';
+        overlay.style.padding = '30px 0';
 
+        // Título que o usuário verá enquanto o PDF é montado
+        const aviso = document.createElement('h2');
+        aviso.innerText = "📸 Capturando Gráficos para o PDF... Não feche a página!";
+        aviso.style.color = '#2b6cb0';
+        aviso.style.marginBottom = '20px';
+        overlay.appendChild(aviso);
+
+        // 3. A FOLHA DO PDF (Com dimensões fixas de papel A4)
+        const relatorioDiv = document.createElement('div');
+        relatorioDiv.style.width = '800px'; 
+        relatorioDiv.style.background = '#ffffff';
+        relatorioDiv.style.padding = '40px';
+        relatorioDiv.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+        
         const colegioNome = document.getElementById('nomeColegioHeader').innerText;
         const colegioLogo = document.getElementById('logoColegio').src;
         const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-        // 3. Monta o Cabeçalho do PDF com a Logo
+        // 4. Monta o Cabeçalho (Com crossorigin="anonymous" para não bloquear a imagem)
         relatorioDiv.innerHTML = `
-            <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px;">
-                <img src="${colegioLogo}" style="max-height: 80px; object-fit: contain; margin-bottom: 10px;">
-                <h1 style="font-size: 24px; margin: 0; color: #2d3748;">Diagnóstico de Convivência Digital Escolar</h1>
+            <div style="text-align: center; margin-bottom: 40px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px;">
+                <img src="${colegioLogo}" crossorigin="anonymous" style="max-height: 80px; margin-bottom: 10px; object-fit: contain;">
+                <h1 style="font-size: 24px; margin: 0; color: #2d3748;">Diagnóstico de Convivência Digital</h1>
                 <h2 style="font-size: 18px; margin: 5px 0; color: #4a5568;">${colegioNome}</h2>
                 <p style="margin: 5px 0; color: #718096; font-size: 14px;">
                     Relatório gerado em: ${dataAtual} | Total de Respostas Anônimas: ${respostas ? respostas.length : 0}
                 </p>
             </div>
-            <div id="pdf-charts-container" style="display: flex; flex-direction: column; gap: 30px;"></div>
+            <div id="pdf-charts-container" style="display: flex; flex-direction: column; gap: 40px;"></div>
         `;
 
-        // Obrigatoriamente adiciona ao DOM para o Canvas renderizar
-        document.body.appendChild(relatorioDiv);
+        overlay.appendChild(relatorioDiv);
+        document.body.appendChild(overlay); // Joga na tela para forçar a renderização!
 
         const chartsContainer = relatorioDiv.querySelector('#pdf-charts-container');
 
-        // 4. Cria um gráfico dinâmico para CADA pergunta existente no banco!
+        // 5. CRIA OS GRÁFICOS (Sem responsividade, tamanho cravado)
         if (perguntas && respostas) {
             perguntas.forEach((p, index) => {
                 const contagem = {};
@@ -547,21 +566,21 @@ window.gerarRelatorioPDF = async function() {
                     if (valor === true || valor === 'true') valor = 'Sim';
                     else if (valor === false || valor === 'false') valor = 'Não';
                     else if (valor === null || valor === undefined || valor === '') valor = 'Sem Resposta';
-                    
                     contagem[valor] = (contagem[valor] || 0) + 1;
                 });
 
                 const wrapper = document.createElement('div');
-                // Adiciona quebra de página a cada 3 gráficos para não cortar no meio da folha
-                if (index > 0 && index % 3 === 0) {
+                // Quebra a página a cada 2 gráficos para ficar bonito
+                if (index > 0 && index % 2 === 0) {
                     wrapper.style.pageBreakBefore = 'always';
                 }
 
+                // ATENÇÃO: As larguras são colocadas DIRETAMENTE na tag <canvas>
                 wrapper.innerHTML = `
-                    <div style="border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; background: white;">
-                        <h3 style="font-size: 15px; margin-bottom: 15px; color: #2b6cb0;">${p.ordem}. ${p.label_texto}</h3>
-                        <div style="height: 220px; position: relative;">
-                            <canvas id="pdf_chart_${p.campo_chave}"></canvas>
+                    <div style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px;">
+                        <h3 style="font-size: 16px; margin-bottom: 15px; color: #2b6cb0;">${p.ordem}. ${p.label_texto}</h3>
+                        <div style="text-align: center;">
+                            <canvas id="pdf_chart_${p.campo_chave}" width="700" height="250"></canvas>
                         </div>
                     </div>
                 `;
@@ -578,8 +597,8 @@ window.gerarRelatorioPDF = async function() {
                         }]
                     },
                     options: {
-                        animation: false, 
-                        responsive: true,
+                        animation: false, // Desliga animação
+                        responsive: false, // Impede que o gráfico suma ao tirar a foto!
                         maintainAspectRatio: false,
                         plugins: { legend: { position: 'right' } }
                     }
@@ -587,31 +606,32 @@ window.gerarRelatorioPDF = async function() {
             });
         }
 
-        btn.innerText = "⏳ Baixando documento...";
+        // 6. ESPERA 2 SEGUNDOS DE RELÓGIO (Com a tela visível para o usuário)
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // navegador desenhou as cores e gráficos no Canvas antes de "tirar a foto".
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // 5. Opções de qualidade do PDF
+        // 7. Configura o gerador de PDF
         const opt = {
-            margin:       15,
+            margin:       10,
             filename:     `Relatorio_${colegioNome.replace(/[^a-z0-9]/gi, '_')}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true }, 
+            image:        { type: 'jpeg', quality: 1.0 },
+            html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' }, 
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        // 6. Gera e faz o download automático
+        // 8. Tira a foto e baixa o PDF
         await html2pdf().set(opt).from(relatorioDiv).save();
 
-        // 7. Limpa a "página invisível" da memória
-        document.body.removeChild(relatorioDiv);
+        // 9. Destrói a tela de carregamento (volta ao normal)
+        document.body.removeChild(overlay);
 
     } catch (e) {
         console.error("Erro ao gerar PDF:", e);
-        alert("❌ Ocorreu um erro ao estruturar o PDF.");
+        alert("❌ Ocorreu um erro ao estruturar o PDF. Verifique o console.");
+        
+        // Garante que a tela não fique travada se houver erro
+        const telaTravada = document.getElementById(OVERLAY_ID);
+        if (telaTravada) document.body.removeChild(telaTravada);
     } finally {
-        // Devolve o botão ao normal
         btn.innerText = textoOriginal;
         btn.disabled = false;
     }
