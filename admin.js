@@ -490,12 +490,12 @@ window.deletarPergunta = async function(campoChave) {
 };
 
 // ==========================================
-// 7. GERADOR DE RELATÓRIO PDF DINÂMICO
+// 7. GERADOR DE RELATÓRIO PDF DINÂMICO (CORRIGIDO)
 // ==========================================
 window.gerarRelatorioPDF = async function() {
     const btn = document.getElementById('btnGerarPDF');
     const textoOriginal = btn.innerText;
-    btn.innerText = "⏳ Gerando PDF... (Aguarde)";
+    btn.innerText = "⏳ Preparando gráficos... (Aguarde)";
     btn.disabled = true;
 
     try {
@@ -506,9 +506,15 @@ window.gerarRelatorioPDF = async function() {
         // 2. Cria uma "página invisível" para montar o PDF
         const relatorioDiv = document.createElement('div');
         relatorioDiv.style.padding = '40px';
-        relatorioDiv.style.background = 'white';
-        relatorioDiv.style.color = 'black';
+        relatorioDiv.style.background = '#ffffff';
+        relatorioDiv.style.color = '#000000';
         relatorioDiv.style.width = '800px'; // Largura fixa estilo folha A4
+        
+        // CORREÇÃO 1: Em vez de jogar para fora da tela, colocamos atrás do conteúdo atual
+        relatorioDiv.style.position = 'absolute';
+        relatorioDiv.style.top = '0';
+        relatorioDiv.style.left = '0';
+        relatorioDiv.style.zIndex = '-1000'; 
 
         const colegioNome = document.getElementById('nomeColegioHeader').innerText;
         const colegioLogo = document.getElementById('logoColegio').src;
@@ -527,9 +533,7 @@ window.gerarRelatorioPDF = async function() {
             <div id="pdf-charts-container" style="display: flex; flex-direction: column; gap: 30px;"></div>
         `;
 
-        // Esconde a div da tela do usuário
-        relatorioDiv.style.position = 'absolute';
-        relatorioDiv.style.left = '-9999px';
+        // Obrigatoriamente adiciona ao DOM para o Canvas renderizar
         document.body.appendChild(relatorioDiv);
 
         const chartsContainer = relatorioDiv.querySelector('#pdf-charts-container');
@@ -554,7 +558,7 @@ window.gerarRelatorioPDF = async function() {
                 }
 
                 wrapper.innerHTML = `
-                    <div style="border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px;">
+                    <div style="border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; background: white;">
                         <h3 style="font-size: 15px; margin-bottom: 15px; color: #2b6cb0;">${p.ordem}. ${p.label_texto}</h3>
                         <div style="height: 220px; position: relative;">
                             <canvas id="pdf_chart_${p.campo_chave}"></canvas>
@@ -563,7 +567,6 @@ window.gerarRelatorioPDF = async function() {
                 `;
                 chartsContainer.appendChild(wrapper);
 
-                // Desenha o gráfico instantaneamente (Sem animação, para a "foto" do PDF sair perfeita)
                 const ctx = document.getElementById(`pdf_chart_${p.campo_chave}`).getContext('2d');
                 new Chart(ctx, {
                     type: (p.tipo_sql === 'INT' || p.campo_chave === 'idade') ? 'bar' : 'pie', 
@@ -575,7 +578,7 @@ window.gerarRelatorioPDF = async function() {
                         }]
                     },
                     options: {
-                        animation: false, // ⚠️ CRÍTICO: Desliga animação para o PDF salvar na hora
+                        animation: false, 
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: { legend: { position: 'right' } }
@@ -584,12 +587,17 @@ window.gerarRelatorioPDF = async function() {
             });
         }
 
+        btn.innerText = "⏳ Baixando documento...";
+
+        // navegador desenhou as cores e gráficos no Canvas antes de "tirar a foto".
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
         // 5. Opções de qualidade do PDF
         const opt = {
             margin:       15,
             filename:     `Relatorio_${colegioNome.replace(/[^a-z0-9]/gi, '_')}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true }, // useCORS permite carregar as logos da internet
+            html2canvas:  { scale: 2, useCORS: true }, 
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
