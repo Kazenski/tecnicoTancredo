@@ -5,30 +5,33 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await carregarDadosColegio();
+    await carregarListaColegios();
     carregarPerguntas();
 });
 
-// Busca o Colégio no banco de dados e exibe o logo e nome no formulário
-async function carregarDadosColegio() {
-    try {
-        const { data: colegio } = await _supabase
-            .from('colegios')
-            .select('*')
-            .limit(1)
-            .maybeSingle();
+async function carregarListaColegios() {
+    const seletor = document.getElementById('colegio_selecionado');
+    const { data: colegios, error } = await _supabase.from('colegios').select('*').order('nome');
 
-        if (colegio) {
-            if (colegio.logo_path) {
-                document.getElementById('logoColegioForm').src = colegio.logo_path;
-            }
-            if (colegio.nome) {
-                document.getElementById('tituloColegioForm').innerText = `🔒 Pesquisa: ${colegio.nome}`;
-            }
-        }
-    } catch (e) {
-        console.log("Usando layout padrão de colégio");
+    seletor.innerHTML = '<option value="">-- Selecione sua escola/setor --</option>';
+    
+    if (colegios) {
+        colegios.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.innerText = c.nome;
+            opt.dataset.logo = c.logo_path || 'img/logo.png'; // Guarda a logo
+            seletor.appendChild(opt);
+        });
     }
+// Muda a logo do cabeçalho quando o aluno escolhe a escola
+    seletor.addEventListener('change', function() {
+        if(this.value) {
+            const opcaoSelecionada = this.options[this.selectedIndex];
+            document.getElementById('logoColegioForm').src = opcaoSelecionada.dataset.logo;
+            document.getElementById('tituloColegioForm').innerText = `🔒 Pesquisa: ${opcaoSelecionada.innerText}`;
+        }
+    });
 }
 
 // Renderiza as perguntas dinamicamente
@@ -106,7 +109,6 @@ async function carregarPerguntas() {
 // Salva a resposta
 document.getElementById('pesquisaForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-
     const btn = document.getElementById('btnSalvar');
     btn.disabled = true;
     btn.innerText = "Enviando dados...";
@@ -114,22 +116,24 @@ document.getElementById('pesquisaForm').addEventListener('submit', async functio
     const formData = new FormData(this);
     const dados = Object.fromEntries(formData.entries());
 
+    // Pega o ID e o Nome do colégio selecionado
+    const seletorColegio = document.getElementById('colegio_selecionado');
+    dados.colegio_id = parseInt(seletorColegio.value);
+    dados.colegio_nome = seletorColegio.options[seletorColegio.selectedIndex].text;
+
     if (dados.idade) dados.idade = parseInt(dados.idade);
     if (dados.foi_vitima) dados.foi_vitima = dados.foi_vitima === 'true';
     if (dados.sabe_pedir_ajuda) dados.sabe_pedir_ajuda = dados.sabe_pedir_ajuda === 'true';
 
-    const { error } = await _supabase
-        .from('respostas_pesquisa')
-        .insert([dados]);
+    const { error } = await _supabase.from('respostas_pesquisa').insert([dados]);
 
-    if (error) {
-        console.error("Erro ao salvar:", error);
-        alert("❌ Ocorreu um erro ao salvar a resposta.");
-    } else {
-        alert("✅ Resposta anônima salva com sucesso!");
+    if (error) alert("❌ Erro ao salvar a resposta.");
+    else {
+        alert("✅ Resposta salva com sucesso!");
         this.reset();
+        document.getElementById('tituloColegioForm').innerText = "🔒 Pesquisa Anônima";
+        document.getElementById('logoColegioForm').src = "img/logo.png";
     }
-
     btn.disabled = false;
     btn.innerText = "💾 Salvar Resposta Anônima";
 });

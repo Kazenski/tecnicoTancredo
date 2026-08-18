@@ -89,6 +89,8 @@ async function carregarEstatisticas() {
         contagemMotivos[motivo] = (contagemMotivos[motivo] || 0) + 1;
     });
 
+    renderizarRelatoriosAvancados(respostas);
+    
     const ctx = document.getElementById('graficoMotivos').getContext('2d');
     
     if (window.meuGrafico) window.meuGrafico.destroy();
